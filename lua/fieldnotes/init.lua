@@ -164,6 +164,7 @@ function M.add_note()
 	if lang == "" then
 		lang = vim.bo.filetype or ""
 	end
+	local source_url = storage.get_source_url(rel_path, start_line, end_line)
 
 	ui.open_input_float(function(text)
 		storage.add_note({
@@ -173,6 +174,7 @@ function M.add_note()
 			text = text,
 			code = code,
 			lang = lang,
+			source_url = source_url,
 		}, M.config)
 		vim.notify("fieldnotes: Note saved.", vim.log.levels.INFO)
 		M.refresh_all_signs()

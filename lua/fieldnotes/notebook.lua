@@ -90,7 +90,9 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); box-sha
 h2.filepath { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--filepath); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; overflow-wrap: anywhere; }
 article.note { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1rem; }
 .notemeta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
-.loc { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); background: rgba(176, 125, 79, 0.12); padding: 0.1rem 0.5rem; border-radius: 6px; }
+.loc { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); background: rgba(176, 125, 79, 0.12); padding: 0.1rem 0.5rem; border-radius: 6px; overflow-wrap: anywhere; }
+a.loc { text-decoration: none; }
+a.loc:hover { background: rgba(176, 125, 79, 0.22); text-decoration: underline; }
 .date { color: var(--muted); font-size: 0.8rem; }
 .codewrap { display: flex; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; max-height: 30rem; overflow-y: auto; }
 pre.gutter { padding: 0.75rem 0.6rem 0.75rem 0.9rem; text-align: right; color: var(--muted); user-select: none; border-right: 1px solid var(--border); font: 0.85rem/1.6 var(--mono); }
@@ -248,7 +250,20 @@ local function render_note(note)
 	local s = note.start_line or 0
 	local e = note.end_line or s
 	local loc = (e > s) and string.format("L%d&ndash;%d", s, e) or string.format("L%d", s)
-	local meta = { '<span class="loc">' .. loc .. "</span>" }
+	local label = esc(note.file or "unknown") .. ":" .. loc
+	local source_url = type(note.source_url) == "string" and note.source_url or ""
+	local meta
+	if source_url ~= "" then
+		meta = {
+			'<a class="loc" href="'
+				.. esc(source_url)
+				.. '" target="_blank" rel="noopener noreferrer" title="Open source at this commit">'
+				.. label
+				.. " &#8599;</a>",
+		}
+	else
+		meta = { '<span class="loc">' .. label .. "</span>" }
+	end
 	local d = date_part(note.created_at)
 	if d ~= "" then
 		table.insert(meta, '<span class="date">' .. esc(d) .. "</span>")

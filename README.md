@@ -78,6 +78,7 @@ Run `:FnServe` to build and serve a central notebook website covering **all** yo
 - An index page lists every project that has notes.
 - Click a project to see a rendered page with each highlighted code block (with line numbers and syntax highlighting) and the note you took — one HTML file per repository.
 - Notes are grouped by file; click a tag chip to filter, click `all` to reset.
+- Each snippet's file-and-line reference links to that exact commit on GitHub or GitLab.
 - Open browser tabs auto-refresh whenever you add, edit, or delete a note — even from a different Neovim instance.
 
 The server runs inside Neovim itself (zero dependencies, built on `vim.uv`) at `http://127.0.0.1:6614/` by default, and stops when Neovim exits or with `:FnStop`. The generated site is fully static and self-contained — it lives in `~/.fieldnotes/notebook/`, so you can also open `index.html` straight from disk or serve the directory with any other web server.
@@ -98,7 +99,7 @@ Notes are stored as JSON in `~/.fieldnotes/<repo-name>/notes.json`.
 
 - `<repo-name>` is derived from the git root directory name.
 - File paths within notes are relative to the repo root, so notes stay valid across machines.
-- Each note also stores a snapshot of the selected code (`code`) and its language (`lang`) for rendering in the notebook.
+- Each note also stores a snapshot of the selected code (`code`), its language (`lang`), and a commit-pinned GitHub/GitLab source link (`source_url`) for rendering in the notebook.
 - The generated notebook website lives in `~/.fieldnotes/notebook/`.
 
 ## Configuration

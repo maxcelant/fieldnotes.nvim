@@ -25,6 +25,51 @@ function M.get_repo_root()
 	return vim.fn.getcwd()
 end
 
+--- Build a browser URL for a source range at the current commit.
+--- Supports GitHub and GitLab HTTPS/SSH remotes.
+---@param filepath string
+---@param start_line number
+---@param end_line number
+---@return string|nil
+function M.get_source_url(filepath, start_line, end_line)
+	local root = M.get_repo_root()
+	local remote_lines = vim.fn.systemlist({ "git", "-C", root, "remote", "get-url", "origin" })
+	if vim.v.shell_error ~= 0 or not remote_lines[1] then
+		return nil
+	end
+	local ref_lines = vim.fn.systemlist({ "git", "-C", root, "rev-parse", "HEAD" })
+	if vim.v.shell_error ~= 0 or not ref_lines[1] then
+		return nil
+	end
+
+	local remote = remote_lines[1]
+	local base
+	if remote:match("^https?://") then
+		base = remote:gsub("^(https?://)[^/@]+@", "%1"):gsub("%.git/?$", ""):gsub("/$", "")
+	else
+		local host, path = remote:match("^[^@]+@([^:]+):(.+)$")
+		if not host then
+			host, path = remote:match("^ssh://[^@]+@([^/]+)/(.+)$")
+		end
+		if host and path then
+			base = "https://" .. host .. "/" .. path:gsub("%.git/?$", ""):gsub("/$", "")
+		end
+	end
+	if not base then
+		return nil
+	end
+
+	local encoded_path = filepath:gsub("[^%w%-%._~/]", function(c)
+		return string.format("%%%02X", string.byte(c))
+	end)
+	local s = math.max(1, start_line or 1)
+	local e = math.max(s, end_line or s)
+	local is_gitlab = base:lower():find("gitlab", 1, true) ~= nil
+	local route = is_gitlab and "/-/blob/" or "/blob/"
+	local anchor = is_gitlab and string.format("#L%d-%d", s, e) or string.format("#L%d-L%d", s, e)
+	return base .. route .. ref_lines[1] .. "/" .. encoded_path .. anchor
+end
+
 --- Get the notes directory for the current repository.
 ---@param config table|nil  Optional config with `storage_dir` override.
 ---@return string
@@ -272,10 +317,8 @@ local function read_source_lines(filepath, start_line, end_line)
 	return result
 end
 
---- Fill in missing code snapshots for the current repo's notes.
---- Notes created before snapshotting existed don't carry their source lines,
---- so read them from disk (current file contents) and persist them. This lets
---- the notebook render code even when generated from a different repo.
+--- Fill in missing code snapshots and source links for the current repo's notes.
+--- Older notes are enriched from the current checkout when possible.
 ---@param config table|nil
 ---@return boolean changed  Whether any note was updated.
 function M.backfill_code(config)
@@ -293,6 +336,13 @@ function M.backfill_code(config)
 				if type(note.lang) ~= "string" or note.lang == "" then
 					note.lang = M.lang_from_file(note.file)
 				end
+				changed = true
+			end
+		end
+		if note.file and (type(note.source_url) ~= "string" or note.source_url == "") then
+			local source_url = M.get_source_url(note.file, note.start_line or 1, note.end_line or note.start_line or 1)
+			if source_url then
+				note.source_url = source_url
 				changed = true
 			end
 		end
